@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Game</title>
+  <style>
+    body {
+      margin: 0;
+      background: black;
+      overflow: hidden;
+      color: white;
+      font-family: Arial;
+    }
+
+    #startBtn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 15px;
+      font-size: 18px;
+    }
+
+    #gameUI {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    button {
+      padding: 10px;
+      margin: 5px;
+    }
+
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+<button id="startBtn">Start Game 🎮</button>
+
+<div id="gameUI">
+  <button onclick="attack()">💥 Attack</button>
+  <button onclick="fire()">🔥 Fire</button>
+</div>
+
+<canvas id="game"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener("resize", resize);
+
+let gameStarted = false;
+
+let player = { x: 200, y: 200, size: 30, hp: 100 };
+let boss = { x: 400, y: 200, size: 40, hp: 100 };
+
+let keys = {};
+let fireballs = [];
+
+let bossDead = false;
+let bossDeathAnim = 0;
+
+document.getElementById("startBtn").onclick = () => {
+  document.getElementById("startBtn").style.display = "none";
+  document.getElementById("gameUI").style.display = "block";
+  gameStarted = true;
+};
+
+document.addEventListener("keydown", e => {
+  keys[e.key.toLowerCase()] = true;
+});
+document.addEventListener("keyup", e => {
+  keys[e.key.toLowerCase()] = false;
+});
+
+function attack() {
+  if (bossDead) return;
+
+  let dx = player.x - boss.x;
+  let dy = player.y - boss.y;
+  let dist = Math.sqrt(dx*dx + dy*dy);
+
+  if (dist < 100) {
+    boss.hp -= 10;
+    boss.x += (Math.random() - 0.5) * 20;
+  }
+}
+
+function fire() {
+  if (bossDead) return;
+  fireballs.push({ x: player.x, y: player.y, size: 10 });
+}
+
+function update() {
+  requestAnimationFrame(update);
+
+  if (!gameStarted) return;
+
+  if (keys["w"]) player.y -= 4;
+  if (keys["s"]) player.y += 4;
+  if (keys["a"]) player.x -= 4;
+  if (keys["d"]) player.x += 4;
+
+  if (!bossDead) {
+    let dx = player.x - boss.x;
+    let dy = player.y - boss.y;
+    boss.x += dx * 0.02;
+    boss.y += dy * 0.02;
+  }
+
+  ctx.fillStyle = "black";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "lime";
+  ctx.fillRect(player.x, player.y, player.size, player.size);
+
+  if (!bossDead) {
+    ctx.fillStyle = "red";
+    ctx.fillRect(boss.x, boss.y, boss.size, boss.size);
+  }
+
+  ctx.fillStyle = "orange";
+  fireballs.forEach((f, i) => {
+    f.x += 8;
+    ctx.fillRect(f.x, f.y, f.size, f.size);
+
+    if (!bossDead && Math.abs(f.x - boss.x) < 30 && Math.abs(f.y - boss.y) < 30) {
+      boss.hp -= 15;
+      fireballs.splice(i, 1);
+    }
+  });
+
+  if (!bossDead) {
+    ctx.fillStyle = "red";
+    ctx.fillRect(20, 20, boss.hp * 2, 10);
+
+    ctx.fillStyle = "green";
+    ctx.fillRect(20, 40, player.hp * 2, 10);
+  }
+
+  if (boss.hp <= 0 && !bossDead) {
+    bossDead = true;
+  }
+
+  if (bossDead) {
+    bossDeathAnim += 0.03;
+
+    ctx.save();
+    ctx.translate(boss.x, boss.y);
+    ctx.rotate(bossDeathAnim * 5);
+    ctx.scale(1 - bossDeathAnim, 1 - bossDeathAnim);
+
+    ctx.fillStyle = "red";
+    ctx.fillRect(0, 0, boss.size, boss.size);
+
+    ctx.restore();
+
+    ctx.fillStyle = "white";
+    ctx.font = "40px Arial";
+    ctx.fillText("🔥 YOU WIN 🔥", canvas.width/2 - 120, canvas.height/2);
+  }
+}
+
+update();
+</script>
+
+</body>
+</html>
